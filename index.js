@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const { URL } = require('url');
 const app = express();
 const urlDatabase = require('./collection/urlDatabase');
 
@@ -32,10 +33,25 @@ function generateShortUrl() {
 app.post('/api/shorturl',(req,res)=>{
   var given_url= req.body.url;
   var short_code= generateShortUrl();
-  const entry = {url: given_url, code:short_code}
+  const urlRegex = /^(http|https):\/\/[^ "]+$/;
 
-  urlDatabase.push(entry);
-  res.json({original_url:given_url, short_url:short_code})
+  if (!urlRegex.test(given_url)) {
+    return res.json({ error: 'Invalid URL' });
+  }
+
+  try {
+    const urlObject = new URL(given_url);
+    if (!urlObject.hostname) {
+      return res.json({ error: 'Invalid Hostname' });
+    }
+
+    const entry = { url: given_url, code: short_code };
+    urlDatabase.push(entry);
+
+    res.json({ original_url: given_url, short_url: short_code });
+  } catch (error) {
+    return res.json({ error: 'Invalid URL' });
+  }
 })
 
 // shortened url
